@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ClipboardList, Languages } from "lucide-react";
+import { ClipboardList, Languages, Info } from "lucide-react";
 
 export default function App() {
   const [states] = useState([
@@ -56,7 +56,19 @@ export default function App() {
     "Average_days_of_employment_provided_per_Household",
     "Differently_abled_persons_worked",
     "Number_of_Completed_Works",
+    "Number_of_Ongoing_Works",
+    "Total_No_of_Workers",
   ];
+
+  const hindiLabels = {
+    Approved_Labour_Budget: "स्वीकृत श्रम बजट",
+    Average_Wage_rate_per_day_per_person: "औसत दैनिक मजदूरी दर",
+    Average_days_of_employment_provided_per_Household: "प्रति परिवार औसत रोजगार दिवस",
+    Differently_abled_persons_worked: "विकलांग व्यक्तियों ने काम किया",
+    Number_of_Completed_Works: "पूर्ण कार्यों की संख्या",
+    Number_of_Ongoing_Works: "चल रहे कार्यों की संख्या",
+    Total_No_of_Workers: "कुल श्रमिकों की संख्या",
+  };
 
   const averages = {};
   numericKeys.forEach((key) => {
@@ -133,6 +145,23 @@ export default function App() {
         </button>
       </div>
 
+      {/* legend */}
+      <div className="flex items-center gap-4 mb-4 text-sm text-gray-700">
+        <Info className="text-blue-600" size={18} />
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+          {showHindi ? "औसत से बेहतर" : "Above Average"}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
+          {showHindi ? "औसत के समान" : "Average"}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+          {showHindi ? "औसत से कम" : "Below Average"}
+        </div>
+      </div>
+
       {loading && <p className="text-gray-600">{showHindi ? "लोड हो रहा है..." : "Loading..."}</p>}
 
       {!loading && data.length > 0 && (
@@ -140,11 +169,13 @@ export default function App() {
           <table className="min-w-full border-collapse text-sm text-left">
             <thead className="bg-blue-100 text-gray-700">
               <tr>
-                <th className="p-3">District</th>
-                <th className="p-3">Year</th>
-                <th className="p-3">Month</th>
+                <th className="p-3">{showHindi ? "ज़िला" : "District"}</th>
+                <th className="p-3">{showHindi ? "वर्ष" : "Year"}</th>
+                <th className="p-3">{showHindi ? "महीना" : "Month"}</th>
                 {numericKeys.map((key) => (
-                  <th key={key} className="p-3">{key.replace(/_/g, " ")}</th>
+                  <th key={key} className="p-3">
+                    {showHindi ? hindiLabels[key] : key.replace(/_/g, " ")}
+                  </th>
                 ))}
               </tr>
             </thead>

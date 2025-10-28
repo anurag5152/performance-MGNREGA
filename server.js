@@ -16,7 +16,9 @@ const BASE_URL =
 // helper to compute average
 const avg = (arr) => {
   const nums = arr.map(Number).filter((n) => !isNaN(n));
-  return nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : 0;
+  return nums.length
+    ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2)
+    : 0;
 };
 
 app.get("/api/mgnrega", async (req, res) => {
@@ -32,21 +34,22 @@ app.get("/api/mgnrega", async (req, res) => {
     const json = await response.json();
     const records = json.records || [];
 
-    // 🔥 FIX: use correct field name 'month'
+    // Group by (district_name + fin_year + month)
     const grouped = {};
     for (const r of records) {
-      const month = r.month || "N/A";
+      const month = r.month || r.Month || "N/A";
       const key = `${r.district_name}_${r.fin_year}_${month}`;
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(r);
     }
 
+    // Aggregate each group
     const aggregated = Object.values(grouped).map((group) => {
       const sample = group[0];
       return {
         district_name: sample.district_name,
         fin_year: sample.fin_year,
-        month: sample.month || "N/A",
+        month: sample.month || sample.Month || "N/A",
         state_code: sample.state_code,
         Approved_Labour_Budget: avg(group.map((g) => g.Approved_Labour_Budget)),
         Average_Wage_rate_per_day_per_person: avg(
@@ -58,7 +61,11 @@ app.get("/api/mgnrega", async (req, res) => {
         Differently_abled_persons_worked: avg(
           group.map((g) => g.Differently_abled_persons_worked)
         ),
-        Number_of_Completed_Works: avg(group.map((g) => g.Number_of_Completed_Works)),
+        Number_of_Completed_Works: avg(
+          group.map((g) => g.Number_of_Completed_Works)
+        ),
+        Number_of_Ongoing_Works: avg(group.map((g) => g.Number_of_Ongoing_Works)),
+        Total_No_of_Workers: avg(group.map((g) => g.Total_No_of_Workers)),
       };
     });
 
@@ -69,4 +76,6 @@ app.get("/api/mgnrega", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+app.listen(PORT, () =>
+  console.log(`✅ Server running at http://localhost:${PORT}`)
+);
