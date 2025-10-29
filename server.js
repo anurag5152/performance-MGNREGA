@@ -3,6 +3,8 @@ import fetch from "node-fetch";
 import cors from "cors";
 import dotenv from "dotenv";
 import pkg from "pg";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -12,7 +14,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🧩 Environment setup
 const PORT = process.env.PORT || 5000;
 const API_KEY = process.env.REACT_APP_API_KEY;
 const BASE_URL =
@@ -27,7 +28,6 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-// 🧠 PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl:
@@ -36,7 +36,6 @@ const pool = new Pool({
       : false,
 });
 
-// ✅ Initialize DB table
 async function initDB() {
   const query = `
     CREATE TABLE IF NOT EXISTS mgnrega_data (
@@ -59,7 +58,6 @@ async function initDB() {
   console.log("✅ Database initialized");
 }
 
-// 🧮 Helper function
 const avg = (arr) => {
   const nums = arr
     .map((v) => parseFloat(v))
@@ -69,7 +67,6 @@ const avg = (arr) => {
     : 0;
 };
 
-// 🚀 API route
 app.get("/api/mgnrega", async (req, res) => {
   try {
     const { state, district, year } = req.query;
@@ -149,7 +146,6 @@ app.get("/api/mgnrega", async (req, res) => {
       };
     });
 
-    // 🗃️ Batch insert to DB
     const insertQuery = `
       INSERT INTO mgnrega_data (
         state_name, district_name, fin_year, month, state_code,
@@ -192,7 +188,16 @@ app.get("/api/mgnrega", async (req, res) => {
   }
 });
 
-// 🏁 Start server
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "build")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
+  });
+}
+
 app.listen(PORT, async () => {
   try {
     await initDB();
