@@ -2,25 +2,16 @@ import { useState, useEffect } from "react";
 import { ClipboardList, Languages, Info } from "lucide-react";
 
 export default function App() {
-  const [states] = useState([
-    "UTTAR PRADESH","MADHYA PRADESH","BIHAR","ASSAM","MAHARASHTRA","GUJARAT",
-    "RAJASTHAN","TAMIL NADU","CHHATTISGARH","KARNATAKA","TELANGANA","ODISHA",
-    "ANDHRA PRADESH","PUNJAB","JHARKHAND","HARYANA","ARUNACHAL PRADESH",
-    "JAMMU AND KASHMIR","MANIPUR","UTTARAKHAND","KERALA","HIMACHAL PRADESH",
-    "MEGHALAYA","WEST BENGAL","MIZORAM","NAGALAND","TRIPURA","SIKKIM",
-    "ANDAMAN AND NICOBAR","LADAKH","PUDUCHERRY","GOA","DN HAVELI AND DD","LAKSHADWEEP"
-  ]);
-
   const [districts, setDistricts] = useState([]);
   const [years, setYears] = useState([]);
-  const [selectedState, setSelectedState] = useState("");
+  const [selectedState] = useState("BIHAR");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
   const [data, setData] = useState([]);
   const [showHindi, setShowHindi] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
 
-  // Fetch list of districts and years once state selected
   useEffect(() => {
     if (!selectedState) return;
     fetch(`http://localhost:5000/api/mgnrega?state=${selectedState}`)
@@ -38,7 +29,6 @@ export default function App() {
   }, [selectedState]);
 
   const fetchData = async () => {
-    if (!selectedState) return alert("Select State first!");
     setLoading(true);
 
     const query = new URLSearchParams({
@@ -58,7 +48,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // Important metrics to show first
   const numericKeys = [
     "approved_labour_budget",
     "average_wage_rate_per_day_per_person",
@@ -79,7 +68,6 @@ export default function App() {
     total_no_of_workers: "कुल श्रमिकों की संख्या",
   };
 
-  // Compute averages for color coding
   const averages = {};
   numericKeys.forEach(key => {
     const nums = data.map(d => parseFloat(d[key])).filter(n => !isNaN(n));
@@ -90,14 +78,57 @@ export default function App() {
     const num = parseFloat(value);
     if (isNaN(num)) return "bg-gray-300";
     const avg = averages[key];
-    if (num > avg * 1.1) return "bg-green-500"; // Above avg
-    if (num < avg * 0.9) return "bg-red-500"; // Below avg
-    return "bg-yellow-400"; // Around avg
+    if (num > avg * 1.1) return "bg-green-500"; 
+    if (num < avg * 0.9) return "bg-red-500"; 
+    return "bg-yellow-400"; 
+  };
+
+  const detectDistrict = async () => {
+    if (!navigator.geolocation) {
+      alert(showHindi ? "आपका ब्राउज़र लोकेशन का पता नहीं लगा सकता" : "Your browser doesn't support geolocation");
+      return;
+    }
+
+    setLocationLoading(true);
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject);
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+      );
+      const data = await response.json();
+      
+      const address = data.address;
+      let detectedDistrict = address.city || address.town || address.district;
+      
+      detectedDistrict = detectedDistrict ? detectedDistrict.toUpperCase() : '';
+      
+      const matchingDistrict = districts.find(d => 
+        d.includes(detectedDistrict) || detectedDistrict.includes(d)
+      );
+
+      if (matchingDistrict) {
+        setSelectedDistrict(matchingDistrict);
+      } else {
+        alert(showHindi 
+          ? "आपका जिला नहीं मिल सका। कृपया मैन्युअल रूप से चुनें।" 
+          : "Couldn't detect your district. Please select manually.");
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      alert(showHindi 
+        ? "लोकेशन का पता लगाने में त्रुटि। कृपया मैन्युअल रूप से चुनें।" 
+        : "Error detecting location. Please select manually.");
+    }
+    setLocationLoading(false);
   };
 
   return (
     <div className="p-6 font-sans bg-gray-50 min-h-screen">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
           <ClipboardList className="text-blue-600" />
@@ -112,29 +143,27 @@ export default function App() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
-        <select
-          value={selectedState}
-          onChange={(e) => setSelectedState(e.target.value)}
-          className="border px-3 py-2 rounded-md"
-        >
-          <option value="">{showHindi ? "राज्य चुनें" : "Select State"}</option>
-          {states.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
-
-        <select
-          value={selectedDistrict}
-          onChange={(e) => setSelectedDistrict(e.target.value)}
-          className="border px-3 py-2 rounded-md"
-        >
-          <option value="">{showHindi ? "ज़िला चुनें" : "Select District"}</option>
-          {districts.map((d) => (
-            <option key={d}>{d}</option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="border px-3 py-2 rounded-md"
+          >
+            <option value="">{showHindi ? "ज़िला चुनें" : "Select District"}</option>
+            {districts.map((d) => (
+              <option key={d}>{d}</option>
+            ))}
+          </select>
+          <button
+            onClick={detectDistrict}
+            disabled={locationLoading || districts.length === 0}
+            className="border px-3 py-2 rounded-md hover:bg-gray-100 disabled:opacity-50"
+            title={showHindi ? "वर्तमान स्थान का पता लगाएं" : "Detect current location"}
+          >
+            {locationLoading ? "📍..." : "📍"}
+          </button>
+        </div>
 
         <select
           value={selectedYear}
@@ -155,7 +184,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-4 mb-4 text-sm text-gray-700">
         <Info className="text-blue-600" size={18} />
         <div className="flex items-center gap-2">
@@ -172,7 +200,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Table */}
       {loading && <p className="text-gray-600">{showHindi ? "लोड हो रहा है..." : "Loading..."}</p>}
 
       {!loading && data.length > 0 && (

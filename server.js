@@ -15,13 +15,11 @@ const API_KEY = process.env.REACT_APP_API_KEY;
 const BASE_URL =
   "https://api.data.gov.in/resource/ee03643a-ee4c-48c2-ac30-9f2ff26ab722";
 
-// ✅ Connect to PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 
-// ✅ Ensure table exists
 async function initDB() {
   const query = `
     CREATE TABLE IF NOT EXISTS mgnrega_data (
@@ -44,7 +42,6 @@ async function initDB() {
   console.log("✅ Database ready");
 }
 
-// ✅ Helper: average numeric values (handles "NA" or "")
 const avg = (arr) => {
   const nums = arr
     .map((v) => parseFloat(v))
@@ -52,7 +49,6 @@ const avg = (arr) => {
   return nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2) : 0;
 };
 
-// ✅ API route
 app.get("/api/mgnrega", async (req, res) => {
   try {
     const { state, district, year } = req.query;
@@ -74,7 +70,6 @@ app.get("/api/mgnrega", async (req, res) => {
 
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
-    // 1️⃣ Try from local DB first
     const dbQuery = `SELECT * FROM mgnrega_data ${whereClause}`;
     const dbResult = await pool.query(dbQuery, values);
     if (dbResult.rows.length > 0) {
@@ -82,7 +77,6 @@ app.get("/api/mgnrega", async (req, res) => {
       return res.json({ records: dbResult.rows });
     }
 
-    // 2️⃣ Otherwise, fetch from data.gov.in
     console.log("🌐 Fetching from data.gov.in...");
     let url = `${BASE_URL}?api-key=${API_KEY}&format=json&limit=10000`;
     if (state) url += `&filters[state_name]=${encodeURIComponent(state)}`;
@@ -99,7 +93,6 @@ app.get("/api/mgnrega", async (req, res) => {
 
     const records = json.records;
 
-    // 3️⃣ Group by (district + year + month)
     const grouped = {};
     for (const r of records) {
       const month = r.month || r.Month || "N/A";
@@ -108,7 +101,6 @@ app.get("/api/mgnrega", async (req, res) => {
       grouped[key].push(r);
     }
 
-    // 4️⃣ Aggregate
     const aggregated = Object.values(grouped).map((group) => {
       const sample = group[0];
       return {
@@ -133,7 +125,6 @@ app.get("/api/mgnrega", async (req, res) => {
       };
     });
 
-    // 5️⃣ Store in DB
     for (const r of aggregated) {
       await pool.query(
         `INSERT INTO mgnrega_data (
@@ -168,7 +159,6 @@ app.get("/api/mgnrega", async (req, res) => {
   }
 });
 
-// ✅ Start server
 app.listen(PORT, async () => {
   await initDB();
   console.log(`✅ Server running at http://localhost:${PORT}`);
