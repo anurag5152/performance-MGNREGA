@@ -18,11 +18,11 @@ const BASE_URL =
   "https://api.data.gov.in/resource/ee03643a-ee4c-48c2-ac30-9f2ff26ab722";
 
 if (!API_KEY) {
-  console.error("❌ Missing API Key (REACT_APP_API_KEY) in .env");
+  console.error("Missing API Key (REACT_APP_API_KEY) in .env");
   process.exit(1);
 }
 if (!process.env.DATABASE_URL) {
-  console.error("❌ Missing DATABASE_URL in .env");
+  console.error("Missing DATABASE_URL in .env");
   process.exit(1);
 }
 
@@ -53,13 +53,11 @@ async function initDB() {
     );
   `;
   await pool.query(query);
-  console.log("✅ Database initialized");
+  console.log("Database initialized");
 }
 
 const avg = (arr) => {
-  const nums = arr
-    .map((v) => parseFloat(v))
-    .filter((n) => !isNaN(n) && n !== null);
+  const nums = arr.map((v) => parseFloat(v)).filter((n) => !isNaN(n) && n !== null);
   return nums.length
     ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2)
     : 0;
@@ -96,8 +94,7 @@ app.get("/api/mgnrega", async (req, res) => {
     console.log("Fetching from API...");
     let url = `${BASE_URL}?api-key=${API_KEY}&format=json&limit=10000`;
     if (state) url += `&filters[state_name]=${encodeURIComponent(state)}`;
-    if (district)
-      url += `&filters[district_name]=${encodeURIComponent(district)}`;
+    if (district) url += `&filters[district_name]=${encodeURIComponent(district)}`;
     if (year) url += `&filters[fin_year]=${encodeURIComponent(year)}`;
 
     const response = await fetch(url);
@@ -188,7 +185,8 @@ app.get("/api/mgnrega", async (req, res) => {
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "build")));
-  app.get("*", (req, res) => {
+
+  app.get("/*", (req, res) => {
     res.sendFile(path.join(__dirname, "build", "index.html"));
   });
 }
@@ -196,8 +194,8 @@ if (process.env.NODE_ENV === "production") {
 app.listen(PORT, async () => {
   try {
     await initDB();
-    console.log(`✅ Server running → http://localhost:${PORT}`);
+    console.log(`Server running → http://localhost:${PORT}`);
   } catch (err) {
-    console.error("❌ Failed to initialize DB:", err.message);
+    console.error("Failed to initialize DB:", err.message);
   }
 });
