@@ -1,5 +1,4 @@
 const express = require("express");
-const fetch = require("node-fetch");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const { Pool } = require("pg");
@@ -11,6 +10,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Prefer Node 18+ global fetch; fallback to dynamic import to avoid CJS/ESM issues
+const fetchFn = globalThis.fetch
+  ? globalThis.fetch.bind(globalThis)
+  : (...args) => import("node-fetch").then(({ default: f }) => f(...args));
 
 const PORT = process.env.PORT || 5000;
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -97,7 +101,7 @@ app.get("/api/mgnrega", async (req, res) => {
     if (district) url += `&filters[district_name]=${encodeURIComponent(district)}`;
     if (year) url += `&filters[fin_year]=${encodeURIComponent(year)}`;
 
-    const response = await fetch(url);
+    const response = await fetchFn(url);
     const json = await response.json();
 
     if (!json.records) {

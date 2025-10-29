@@ -11,10 +11,13 @@ export default function App() {
   const [showHindi, setShowHindi] = useState(false);
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const API_BASE =
+    process.env.REACT_APP_API_BASE ||
+    (process.env.NODE_ENV === "development" ? "http://localhost:5000" : "");
 
   useEffect(() => {
     if (!selectedState) return;
-    fetch(`http://localhost:5000/api/mgnrega?state=${selectedState}`)
+    fetch(`${API_BASE}/api/mgnrega?state=${selectedState}`)
       .then(res => res.json())
       .then(json => {
         const records = json.records || [];
@@ -38,7 +41,7 @@ export default function App() {
     }).toString();
 
     try {
-      const res = await fetch(`http://localhost:5000/api/mgnrega?${query}`);
+      const res = await fetch(`${API_BASE}/api/mgnrega?${query}`);
       const json = await res.json();
       setData(json.records || []);
     } catch (err) {
