@@ -2,7 +2,6 @@
   "name": "performance-district",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "proxy": "https://api.data.gov.in",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",

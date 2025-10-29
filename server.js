@@ -1,13 +1,11 @@
-import express from "express";
-import fetch from "node-fetch";
-import cors from "cors";
-import dotenv from "dotenv";
-import pkg from "pg";
-import path from "path";
-import { fileURLToPath } from "url";
+const express = require("express");
+const fetch = require("node-fetch");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const { Pool } = require("pg");
+const path = require("path");
 
 dotenv.config();
-const { Pool } = pkg;
 
 const app = express();
 app.use(cors());
@@ -91,11 +89,11 @@ app.get("/api/mgnrega", async (req, res) => {
     const dbResult = await pool.query(dbQuery, values);
 
     if (dbResult.rows.length > 0) {
-      console.log("📦 Served from local DB");
+      console.log("Served from local DB");
       return res.json({ records: dbResult.rows });
     }
 
-    console.log("🌐 Fetching from API...");
+    console.log("Fetching from API...");
     let url = `${BASE_URL}?api-key=${API_KEY}&format=json&limit=10000`;
     if (state) url += `&filters[state_name]=${encodeURIComponent(state)}`;
     if (district)
@@ -106,7 +104,7 @@ app.get("/api/mgnrega", async (req, res) => {
     const json = await response.json();
 
     if (!json.records) {
-      console.error("⚠️ Invalid API response:", json);
+      console.error("Invalid API response:", json);
       return res.status(400).json({ error: "Invalid API response" });
     }
 
@@ -188,15 +186,11 @@ app.get("/api/mgnrega", async (req, res) => {
   }
 });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "build")));
-  app.get("/*", (req, res) => {
+  app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "build", "index.html"));
   });
-
 }
 
 app.listen(PORT, async () => {
