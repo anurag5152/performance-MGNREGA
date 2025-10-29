@@ -20,59 +20,69 @@ export default function App() {
   const [showHindi, setShowHindi] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Fetch list of districts and years once state selected
   useEffect(() => {
     if (!selectedState) return;
     fetch(`http://localhost:5000/api/mgnrega?state=${selectedState}`)
-      .then((res) => res.json())
-      .then((json) => {
+      .then(res => res.json())
+      .then(json => {
         const records = json.records || [];
         setDistricts(
-          [...new Set(records.map((r) => r.district_name).filter(Boolean))].sort()
+          [...new Set(records.map(r => r.district_name).filter(Boolean))].sort()
         );
         setYears(
-          [...new Set(records.map((r) => r.fin_year).filter(Boolean))].sort().reverse()
+          [...new Set(records.map(r => r.fin_year).filter(Boolean))].sort().reverse()
         );
-      });
+      })
+      .catch(err => console.error("Error loading metadata:", err));
   }, [selectedState]);
 
   const fetchData = async () => {
     if (!selectedState) return alert("Select State first!");
     setLoading(true);
+
     const query = new URLSearchParams({
       state: selectedState,
       ...(selectedDistrict && { district: selectedDistrict }),
       ...(selectedYear && { year: selectedYear }),
     }).toString();
 
-    const res = await fetch(`http://localhost:5000/api/mgnrega?${query}`);
-    const json = await res.json();
-    setData(json.records || []);
+    try {
+      const res = await fetch(`http://localhost:5000/api/mgnrega?${query}`);
+      const json = await res.json();
+      setData(json.records || []);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      alert("Error loading data. Try again.");
+    }
     setLoading(false);
   };
 
+  // Important metrics to show first
   const numericKeys = [
-    "Approved_Labour_Budget",
-    "Average_Wage_rate_per_day_per_person",
-    "Average_days_of_employment_provided_per_Household",
-    "Differently_abled_persons_worked",
-    "Number_of_Completed_Works",
-    "Number_of_Ongoing_Works",
-    "Total_No_of_Workers",
+    "approved_labour_budget",
+    "average_wage_rate_per_day_per_person",
+    "average_days_of_employment_provided_per_household",
+    "differently_abled_persons_worked",
+    "number_of_completed_works",
+    "number_of_ongoing_works",
+    "total_no_of_workers",
   ];
 
   const hindiLabels = {
-    Approved_Labour_Budget: "स्वीकृत श्रम बजट",
-    Average_Wage_rate_per_day_per_person: "औसत दैनिक मजदूरी दर",
-    Average_days_of_employment_provided_per_Household: "प्रति परिवार औसत रोजगार दिवस",
-    Differently_abled_persons_worked: "विकलांग व्यक्तियों ने काम किया",
-    Number_of_Completed_Works: "पूर्ण कार्यों की संख्या",
-    Number_of_Ongoing_Works: "चल रहे कार्यों की संख्या",
-    Total_No_of_Workers: "कुल श्रमिकों की संख्या",
+    approved_labour_budget: "स्वीकृत श्रम बजट",
+    average_wage_rate_per_day_per_person: "औसत दैनिक मजदूरी दर",
+    average_days_of_employment_provided_per_household: "प्रति परिवार औसत रोजगार दिवस",
+    differently_abled_persons_worked: "विकलांग व्यक्तियों ने काम किया",
+    number_of_completed_works: "पूर्ण कार्यों की संख्या",
+    number_of_ongoing_works: "चल रहे कार्यों की संख्या",
+    total_no_of_workers: "कुल श्रमिकों की संख्या",
   };
 
+  // Compute averages for color coding
   const averages = {};
-  numericKeys.forEach((key) => {
-    const nums = data.map((d) => parseFloat(d[key])).filter((n) => !isNaN(n));
+  numericKeys.forEach(key => {
+    const nums = data.map(d => parseFloat(d[key])).filter(n => !isNaN(n));
     averages[key] = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
   });
 
@@ -80,14 +90,14 @@ export default function App() {
     const num = parseFloat(value);
     if (isNaN(num)) return "bg-gray-300";
     const avg = averages[key];
-    if (num > avg * 1.1) return "bg-green-500";
-    if (num < avg * 0.9) return "bg-red-500";
-    return "bg-yellow-400";
+    if (num > avg * 1.1) return "bg-green-500"; // Above avg
+    if (num < avg * 0.9) return "bg-red-500"; // Below avg
+    return "bg-yellow-400"; // Around avg
   };
 
   return (
     <div className="p-6 font-sans bg-gray-50 min-h-screen">
-      {/* header */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
           <ClipboardList className="text-blue-600" />
@@ -102,7 +112,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* filters */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <select
           value={selectedState}
@@ -145,7 +155,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* legend */}
+      {/* Legend */}
       <div className="flex items-center gap-4 mb-4 text-sm text-gray-700">
         <Info className="text-blue-600" size={18} />
         <div className="flex items-center gap-2">
@@ -162,6 +172,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* Table */}
       {loading && <p className="text-gray-600">{showHindi ? "लोड हो रहा है..." : "Loading..."}</p>}
 
       {!loading && data.length > 0 && (
@@ -187,7 +198,7 @@ export default function App() {
                   <td className="p-3">{d.month}</td>
                   {numericKeys.map((key) => (
                     <td key={key} className="p-3">
-                      {d[key]}{" "}
+                      {d[key] ?? "-"}{" "}
                       <span
                         className={`inline-block w-2 h-2 rounded-full ml-2 ${getDotColor(
                           key,
